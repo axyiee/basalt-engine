@@ -1,0 +1,12 @@
+[versions]
+minecraft = "1.19.4"
+cats-effect = "3.4.9"
+cats-core = "2.9.0"
+
+[libraries]
+minecraft = { module = "com.mojang:minecraft", version.ref = "minecraft" }
+cats-effect = { module = "org.typelevel:cats-effect_3", version.ref = "cats-effect" }
+cats-core = { module = "org.typelevel:cats-core_3", version.ref = "cats-core" }
+
+[bundles]
+cats = ["cats-effect", "cats-core"]
