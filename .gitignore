@@ -19,3 +19,5 @@ replay_*.log
 .vscode/
 .classpath
 .project
+.bloop
+.metals

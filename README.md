@@ -17,12 +17,13 @@ ground up in [Scala 3] with architectural support for [Cats Effect] and modulari
 * [ ] Advanced entity querying
 * [ ] Query composition with entities and streams
 * [ ] Persistent Data Container (PDC) support on Paper
-* [ ] Data persistance and (de)serialization to Circe
+* [ ] Data persistence and (de)serialization to Circe
 * [ ] Network pipeline injection/transformation
 * [ ] Server-side data pack replication
 * * [ ] Resource pack integration
 * * [ ] HUD and font rendering
 * * [ ] Custom blocks and items
+* [ ] Multi-platform Scala support
 * [ ] Minecraft: Java Edition protocol implementation
 * [ ] Not confirmed: Server-side Fabric toolchain support
 * [ ] Not confirmed: The Kotlin Programming Language support
@@ -66,9 +67,10 @@ otherwise.
 ```scala
 import scala.concurrent.duration.TimeUnit
 import basalt.core.{Extension, Component}
-import basalt.core.event.{PlayerJoin}
+import basalt.core.event.PlayerJoin
 import basalt.core.protocol.java.JavaProtocol
-import basalt.core.syntax.{java._, _}
+import basalt.core.syntax.java._
+import basalt.core.syntax._
 
 def extension[F[_]: Sync: Clock]: Extension[F] =
   Extension[F](JavaProtocol.compat(from = v"1.19.0", to = v"1.19.4"))
@@ -96,4 +98,11 @@ def firstJoinWelcome[F[_]: Clock]: System[F] =
 ## Reference
 
 **¹:** Software architectural pattern "Entity component system".
+
+## Related projects
+
+- [ECScala](https://github.com/atedeg/ecscala) - An ECS Scala framework. This is such a nice proof-of-concept that 
+  helped this project to get started, so I'd like to thank its developers!
+- [flecs](https://github.com/SanderMertens/flecs) - A fast entity component system (ECS) for C & C++
+- [Dominion](https://github.com/dominion-dev/dominion-ecs-java) - Insanely fast ECS (Entity Component System) for Java
 

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+SCRIPT_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 || exit ; pwd -P )"
+GIT_ROOT="$(dirname "$SCRIPT_PATH")/.git"
+if [ ! -d "$GIT_ROOT" ]; then
+    echo "Error: $GIT_ROOT does not exist"
+    exit 1
+fi
+[ -f "$SCRIPT_PATH/pre-commit" ] && cp -f "$SCRIPT_PATH/pre-commit" "$GIT_ROOT/hooks/pre-commit"

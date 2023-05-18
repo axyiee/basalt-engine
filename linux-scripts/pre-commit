@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+IFS=$'\n'
+year=$(date +'%Y')
+
+# shellcheck disable=SC2207
+newly_added_files=($(git diff --name-only --diff-filter=A --cached | grep -E "\.(scala|gradle)$"))
+
+if [ ${#newly_added_files[@]} -ne 0 ]; then
+  files_without_header=()
+  for newly_added_file in "${newly_added_files[@]}"; do
+    output="$(grep -L "Copyright (C) $year" "$newly_added_file")"
+    if [ -n "$output" ]; then
+      files_without_header+=("$output")
+    fi
+  done
+  if [ ${#files_without_header[@]} -ne 0 ]; then
+    echo "Copyright (C) $year license header not found in the following newly added files:"
+    for file in "${files_without_header[@]}"; do
+      :
+      echo "   - $file"
+    done
+    exit 1
+  else
+    echo "Hooray! All new files have updated license header."
+    exit 0
+  fi
+fi
