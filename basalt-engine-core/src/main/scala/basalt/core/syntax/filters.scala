@@ -17,19 +17,41 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 package basalt.core.syntax
+package filters
 
 import basalt.core.query.{
   QueryingFilter,
   QueryingFilterIterable,
   QueryingFilterTag
 }
+import scala.annotation.showAsInfix
+import basalt.core.query.QNil
 
 trait FilterIterableSyntax:
   extension [
       H <: QueryingFilter: QueryingFilterTag,
       T <: QueryingFilterIterable
   ](head: H)
-    def <>(tail: T): basalt.core.query.<>[H, T] =
-      basalt.core.query.<>(head, tail)
+    def <>(tail: T): basalt.core.syntax.filters.<>[H, T] =
+      basalt.core.syntax.filters.<>(head, tail)
 
-object filters extends FilterIterableSyntax
+@showAsInfix
+final case class <>[
+    +C <: QueryingFilter: QueryingFilterTag,
+    +L <: QueryingFilterIterable
+](h: C, t: L)
+    extends QueryingFilterIterable {
+
+  override def iterator: Iterator[QueryingFilter] =
+    new Iterator[QueryingFilter] {
+      private var remaining: QueryingFilterIterable = h <> t
+      override def hasNext: Boolean                 = remaining != QNil
+      override def next(): QueryingFilter = {
+        val head <> tail = remaining: @unchecked
+        remaining = tail
+        head
+      }
+    }
+}
+
+object all extends FilterIterableSyntax

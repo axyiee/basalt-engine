@@ -18,30 +18,27 @@
  */
 package basalt.core.default
 
-import basalt.core.datatype.Entity
+import basalt.core.descriptor.{
+  ArchetypesDescriptor,
+  ComponentsDescriptor,
+  EntitiesDescriptor
+}
 import basalt.core.engine.Engine
 import basalt.core.query.{
   OnlyComponents,
   QueryingFilterIterable,
   QueryingFilterIterableTag
 }
-import basalt.core.storage.archetype.ComponentArchetype
 
-import java.util.concurrent.ConcurrentMap
-import scala.collection.mutable.{ArrayBuffer, Map}
-import cats.syntax.all._
 import cats.effect.kernel.Async
+import cats.syntax.all._
+
+import collection.mutable.{ArrayBuffer, Map, LongMap}
 
 type ArchetypeCombIndex =
   Map[ /* K: Component combination, V: Archetype ID */ OnlyComponents[
       QueryingFilterIterable
     ], Int]
-type ArchetypeIndex[F[_]] =
-  Map[Int, /* K: ID, V: Archetype data */ ComponentArchetype[F, _]]
-type ComponentIndex = Map[Int, /* K: ID, V: Column */ Map[Int, Int]]
-type EntityIndex    = Map[ /* K: ID, V: Archetype Index */ Long, Int]
-type ComponentIdIndex =
-  Map[ /* K: Component Class Qualified Name, V: ID */ String, Int]
 
 /** Default, general-purpose implementation of the Basalt [[Engine]] API.
   *
@@ -50,19 +47,22 @@ type ComponentIdIndex =
   * @tparam F
   *   the effect type used for the engine.
   */
-class BasaltEngine[F[_]: Async](val tps: Int = 20) extends Engine[F] {
-  val archetypeCombIndex: ArchetypeCombIndex = Map()
-  val archetypeIndex: ArchetypeIndex[F]      = Map()
-  val entityIndex: EntityIndex               = Map()
-  val componentDescriptors: ComponentIndex   = Map()
-  val attributeDescriptors: ComponentIndex   = Map()
-  val componentIds: ComponentIdIndex         = Map()
+class BasaltEngine[F[_]: Async](
+    val tps: Int = 20,
+    override val components: BasaltComponentView[F],
+    override val entities: BasaltEntityView[F],
+    val pipeline: EnginePipeline[F]
+) extends Engine[F]
 
-  override val components = new BasaltComponentView[F](this)
-  override val entities   = new BasaltEntityView[F](this)
-  private val pipeline    = EnginePipeline[F](this, tps)
-
-  def query[I <: QueryingFilterIterable: QueryingFilterIterableTag](using
-      QueryingFilterIterableTag[I]
-  ): fs2.Stream[F, (Entity[F], I)] = fs2.Stream.empty
-}
+object BasaltEngine:
+  def apply[F[_]: Async](tps: Int = 20): F[BasaltEngine[F]] =
+    for
+      archetypes <- ArchetypesDescriptor[F]
+      components <- ComponentsDescriptor[F]
+      entities   <- Async[F].pure(new EntitiesDescriptor[F])
+      view1 <- Async[F].pure(
+        BasaltComponentView[F](components, entities, archetypes)
+      )
+      view2    <- Async[F].pure(BasaltEntityView[F](entities, archetypes))
+      pipeline <- Async[F].pure(EnginePipeline[F](view1, view2, tps))
+    yield new BasaltEngine[F](tps, view1, view2, pipeline)

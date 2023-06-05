@@ -34,4 +34,5 @@ tasks.withType(ScalaCompile) {
 dependencies {
     implementation libs.scala.library
     implementation libs.cats.core
+    testImplementation libs.bundles.munit
 }

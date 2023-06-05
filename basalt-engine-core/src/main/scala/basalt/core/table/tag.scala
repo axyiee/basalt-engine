@@ -16,24 +16,11 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-package basalt.core.default
+package basalt.core.table
 
-import basalt.core.datatype.{EntityId, EntityRef}
-import basalt.core.descriptor.{ArchetypesDescriptor, EntitiesDescriptor}
-import basalt.core.engine.{Engine, EntityView}
+type TableId = TableId.Type
 
-import cats.{Applicative, Monoid}
-import cats.effect.kernel.Sync
-import cats.syntax.all._
-
-import collection.mutable.LongMap
-
-class BasaltEntityView[F[_]: Sync](
-    val descriptor: EntitiesDescriptor[F],
-    val archetypes: ArchetypesDescriptor[F]
-) extends EntityView[F]:
-  override def create: F[EntityRef[F]] =
-    descriptor.init.map(EntityRef[F](_))
-
-  override def delete(id: EntityId): F[Unit] =
-    descriptor.kill(id, archetypes)
+object TableId:
+  opaque type Type = Long
+  def apply(from: Long): TableId             = from
+  extension (self: TableId) def toLong: Long = self

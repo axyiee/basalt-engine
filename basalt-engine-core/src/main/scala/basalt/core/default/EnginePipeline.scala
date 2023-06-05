@@ -18,14 +18,14 @@
  */
 package basalt.core.default
 
+import basalt.core.datatype.{Tick, TickInfo}
 import basalt.core.engine.Engine
-import cats.effect.kernel.{Async, Temporal}
-import concurrent.duration.DurationInt
-import cats.syntax.all.*
-import scala.concurrent.duration.FiniteDuration
-import cats.effect.kernel.Ref
+import basalt.core.query.QueryingFilter
 
-private case class TickInfo(ticksPerSecond: Int, tickDuration: FiniteDuration)
+import cats.effect.kernel.{Async, Ref, Temporal}
+import cats.syntax.all.*
+
+import fs2.concurrent.Topic
 
 /** Processes entities, components, queries, and systems given their previous
   * and current state.
@@ -34,32 +34,34 @@ private case class TickInfo(ticksPerSecond: Int, tickDuration: FiniteDuration)
   *   the effect type used for the engine.
   */
 class EnginePipeline[F[_]: Async](
-    private val engine: BasaltEngine[F],
-    private val tps: Int = 20
-) {
+    private val components: BasaltComponentView[F],
+    private val entities: BasaltEntityView[F],
+    tps: Int = 20
+):
+  private val ticking = TickInfo(tps)
 
-  /** Generates information about ticking based on the tick period ([[tps]]).
-    * @param tps
-    *   How many ticks are going to be performed within a second.
+  /** Intercepts the looping process in order to perform some action within the
+    * current tick.
+    * @param currentTick
+    *   sequence number of the current tick. It starts at 1 and goes up to
+    *   [[tps]].
+    * @return
+    *   the effect that is going to be performed within the current tick.
     */
-  def getTickInfo(tps: Int): TickInfo =
-    TickInfo(tps, 1.second / tps)
-
-  def intercept(tickDelta: Int): F[Unit] =
+  def intercept(currentTick: Tick): F[Unit] =
     Async[F].unit
 
+  /** Loops the engine pipeline to allow systems, queries, components and
+    * entities to be processed.
+    * @return
+    *   the effect that is going to be performed within the current tick.
+    */
   def loop: F[Unit] =
-    val ticking     = getTickInfo(tps)
-    val currentTick = Ref[F].of(1)
+    val currentTick = Ref[F].of(Tick(1))
     currentTick.flatMap(ref =>
-      ref.get
-        .flatTap(value => intercept(value))
-        .flatMap(_ =>
-          ref.update(curr =>
-            if curr < ticking.ticksPerSecond then curr + 1 else 1
-          )
-        )
+      ref
+        .getAndUpdate(curr => curr.validate(curr + 1, ticking))
+        .flatTap(intercept)
         .flatMap(_ => Temporal[F].sleep(ticking.tickDuration))
         .foreverM
     )
-}

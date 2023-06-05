@@ -16,24 +16,18 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-package basalt.core.default
+package basalt.core
 
-import basalt.core.datatype.{EntityId, EntityRef}
-import basalt.core.descriptor.{ArchetypesDescriptor, EntitiesDescriptor}
-import basalt.core.engine.{Engine, EntityView}
+import concurrent.duration.DurationInt
+import default.{BasaltEngine, EnginePipeline}
+import munit._
+import cats.effect._
+import java.util.concurrent.TimeoutException
 
-import cats.{Applicative, Monoid}
-import cats.effect.kernel.Sync
-import cats.syntax.all._
-
-import collection.mutable.LongMap
-
-class BasaltEntityView[F[_]: Sync](
-    val descriptor: EntitiesDescriptor[F],
-    val archetypes: ArchetypesDescriptor[F]
-) extends EntityView[F]:
-  override def create: F[EntityRef[F]] =
-    descriptor.init.map(EntityRef[F](_))
-
-  override def delete(id: EntityId): F[Unit] =
-    descriptor.kill(id, archetypes)
+class EnginePipelineSuite extends CatsEffectSuite:
+  test("EnginePipeline should be able to tick") {
+    BasaltEngine[IO]()
+      .flatMap(engine =>
+        interceptIO[TimeoutException](engine.pipeline.loop.timeout(5.seconds))
+      )
+  }

@@ -18,53 +18,52 @@
  */
 package basalt.core.datatype
 
+import basalt.core.collection.GenerationalKey
+import basalt.core.descriptor.EntitiesDescriptor
 import basalt.core.engine.Engine
-import basalt.core.query.{QueryingFilter, QueryingFilterTag}
-import cats.kernel.Monoid
-import cats.Applicative
-import cats.Id
 
-/** An [[Entity]] is an identifier for a set of [[Component]]s on a specific
+type EntityId   = GenerationalKey
+type EntityMeta = EntityMeta.Type
+
+/** An entity is an identifier for a set of [[Component]]s on a specific
   * [[Engine]] context.
   *
-  * Each [[Entity]] has an unique identification and a set of [[Component]]s and
+  * Each entity has an unique identification and a set of [[Component]]s and
   * [[Attribute]]s. Each [[Component]] must be associated with a type used up to
-  * a single time on each [[Entity]].
+  * a single time on each entity.
   *
-  * @tparam F
-  *   the effect type used for the engine.
+  * This is a reference to the entity location within an archetype.
   */
-trait Entity[F[_]]:
-  def identity: cats.Id[Long]
-  def insert[A <: Component: QueryingFilterTag, D](component: D)(using
-      Engine[F]
-  ): F[Unit]
-  def remove[A <: Component: QueryingFilterTag](using
-      QueryingFilterTag[A]
-  )(using Engine[F]): F[Unit]
-  def get[A <: Component: QueryingFilterTag, T](using
-      QueryingFilterTag[A]
-  )(using Engine[F]): Option[A]
-  def has[A <: Component: QueryingFilterTag](using
-      QueryingFilterTag[QueryingFilter]
-  )(using Engine[F]): Boolean
+object EntityMeta:
+  opaque type Type = Long
 
-given monoidForEntity[F[_]: Applicative](using Engine[F]): Monoid[Entity[F]]
-with
-  def empty: Entity[F] = new Entity[F] {
-    def identity: cats.Id[Long] = -1
-    override def get[A <: Component: QueryingFilterTag, T](using
-        QueryingFilterTag[A]
-    )(using Engine[F]): Option[A] = Option.empty[A]
-    override def has[A <: Component: QueryingFilterTag](using
-        QueryingFilterTag[QueryingFilter]
-    )(using Engine[F]): Boolean = false
-    override def insert[A <: Component: QueryingFilterTag, D](
-        component: D
-    )(using Engine[F]): F[Unit] = Applicative[F].unit
-    override def remove[A <: Component: QueryingFilterTag](using
-        QueryingFilterTag[A]
-    )(using Engine[F]): F[Unit] = Applicative[F].unit
-  }
-  def combine(x: Entity[F], y: Entity[F]): Entity[F] =
-    throw new UnsupportedOperationException("Cannot combine entities")
+  /** Constructs a new generational index.
+    * @param generation
+    *   the generation of the entry
+    * @param index
+    *   the identifier of the entry
+    */
+  def apply(archetypeId: Long, archetypeRow: Int): EntityMeta =
+    (archetypeId << 32) | (archetypeRow & 0xffffffff)
+
+  extension (key: EntityMeta)
+    def toBits: Long      = key
+    def archetypeId: Int  = (toBits >> 32).toInt
+    def archetypeRow: Int = (toBits & 0xffffffff).toInt
+
+/** An entity is an identifier for a set of [[Component]]s on a specific
+  * [[Engine]] context.
+  *
+  * Each entity has an unique identification and a set of [[Component]]s and
+  * [[Attribute]]s. Each [[Component]] must be associated with a type used up to
+  * a single time on each entity.
+  *
+  * This is a reference for modifying an Entity within an [[Engine]] context.
+  *
+  * @see
+  *   basalt.core.collection.GenerationalEntry
+  */
+// todo
+class EntityRef[F[_]](
+    val id: EntityId
+)

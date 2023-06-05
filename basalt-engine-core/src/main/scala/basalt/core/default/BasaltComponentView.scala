@@ -18,41 +18,90 @@
  */
 package basalt.core.default
 
-import basalt.core.datatype.Component
-import basalt.core.engine.{ComponentView, Engine}
-import basalt.core.query.QueryingFilterTag
-import cats.Monoid
-import cats.syntax.all._
-import cats.effect.kernel.Sync
-
-class BasaltComponentView[F[_]: Sync](engine: BasaltEngine[F])
-    extends ComponentView[F] {
-  given Engine[F] = engine
-
-  def getId[C <: Component: QueryingFilterTag](using
-      tag: QueryingFilterTag[C]
-  ): Option[Int] = engine.componentIds.get(tag.qualifiedName)
-
-  def extract[C <: Component: QueryingFilterTag](
-      targetEntityId: Long
-  ): Either[IllegalArgumentException, Option[C]] =
-    engine.entityIndex
-      .get(targetEntityId)
-      .toRight(
-        IllegalArgumentException(s"Entity $targetEntityId does not exist")
-      )
-      .map(
-        engine.archetypeIndex
-          .get(_)
-          .flatMap(archetype => archetype.getComponent[C](targetEntityId))
-      )
-
-  def remove[C <: Component: QueryingFilterTag](
-      targetEntityId: Long
-  ): F[Option[C]] = Sync[F].pure(Option.empty[C])
-
-  def update[C <: Component: QueryingFilterTag](
-      targetEntityId: Long,
-      content: C
-  ): F[Unit] = Sync[F].unit
+import basalt.core.archetype.ComponentArchetype
+import basalt.core.datatype.{Component, EntityId}
+import basalt.core.descriptor.{
+  ArchetypesDescriptor,
+  ComponentsDescriptor,
+  EntitiesDescriptor
 }
+import basalt.core.engine.ComponentView
+import basalt.core.query.{ComponentFilterTag, QueryingFilterTag}
+
+import cats.Monoid
+import cats.effect.kernel.{Async, Sync}
+import cats.syntax.all._
+
+import collection.mutable.Stack
+import scala.collection.mutable.LongMap
+
+class BasaltComponentView[F[_]: Sync](
+    val components: ComponentsDescriptor[F],
+    val entities: EntitiesDescriptor[F],
+    val archetypes: ArchetypesDescriptor[F]
+) extends ComponentView[F]:
+  override def getId[C <: Component: QueryingFilterTag]: F[Long] =
+    components.getId[C]
+
+  override def extract[C <: Component: QueryingFilterTag](
+      target: EntityId
+  ): F[C] =
+    for
+      componentId <- getId[C]
+      archetypeId <- Sync[F].fromOption(
+        entities.getArchetypeId(target),
+        new IllegalArgumentException(s"Entity $target does not exist")
+      )
+      archetype <- Sync[F].fromOption(
+        archetypes(archetypeId),
+        new IllegalArgumentException(s"Archetype $archetypeId does not exist")
+      )
+      component <- Sync[F].fromOption(
+        archetype.getComponent(target, componentId),
+        new IllegalArgumentException(
+          s"Component ${componentId} does not exist on entity $target"
+        )
+      )
+    yield component.asInstanceOf[C]
+
+  override def extractAll(
+      target: EntityId
+  ): fs2.Stream[F, Component] =
+    for
+      archetypeId <- fs2.Stream.fromOption(entities.getArchetypeId(target))
+      archetype   <- fs2.Stream.fromOption(archetypes(archetypeId))
+      component   <- fs2.Stream.emits(archetype.getComponents(target).toSeq)
+    yield component
+
+  override def remove[C <: Component: QueryingFilterTag](
+      target: EntityId
+  ): F[Unit] =
+    for
+      componentId <- getId[C]
+      archetypeId <- Sync[F].fromOption(
+        entities.getArchetypeId(target),
+        new IllegalArgumentException(s"Entity $target does not exist")
+      )
+      archetype <- Sync[F].fromOption(
+        archetypes(archetypeId),
+        new IllegalArgumentException(s"Archetype $archetypeId does not exist")
+      )
+      component <- archetype.removeComponent(target, componentId)
+    yield ()
+
+  override def update[C <: Component: QueryingFilterTag](
+      target: EntityId,
+      content: C
+  ): F[Unit] =
+    for
+      componentId <- getId[C]
+      archetypeId <- Sync[F].fromOption(
+        entities.getArchetypeId(target),
+        new IllegalArgumentException(s"Entity $target does not exist")
+      )
+      archetype <- Sync[F].fromOption(
+        archetypes(archetypeId),
+        new IllegalArgumentException(s"Archetype $archetypeId does not exist")
+      )
+      component <- archetype.addComponent(target, componentId, content)
+    yield ()

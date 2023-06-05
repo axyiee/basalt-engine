@@ -21,7 +21,7 @@ package basalt.core.query
 import basalt.core.datatype.Component
 import basalt.core.syntax.all._
 
-import scala.annotation.{showAsInfix, tailrec}
+import scala.annotation.tailrec
 import scala.quoted.{Expr, Quotes, Type}
 
 trait QueryingFilterIterable extends Iterable[QueryingFilter] {
@@ -43,30 +43,11 @@ object QueryingFilterIterable {
 // syntax sugar; using CNil instead of CNil.type.
 sealed trait QNil extends QueryingFilterIterable {
   def <>[C <: QueryingFilter: QueryingFilterTag](head: C): C <> QNil =
-    basalt.core.query.<>(head, this)
+    basalt.core.syntax.filters.<>(head, this)
 }
 
 case object QNil extends QNil {
   override def iterator = Iterator.empty
-}
-
-@showAsInfix
-final case class <>[
-    +C <: QueryingFilter: QueryingFilterTag,
-    +L <: QueryingFilterIterable
-](h: C, t: L)
-    extends QueryingFilterIterable {
-
-  override def iterator: Iterator[QueryingFilter] =
-    new Iterator[QueryingFilter] {
-      private var remaining: QueryingFilterIterable = h <> t
-      override def hasNext: Boolean                 = remaining != QNil
-      override def next(): QueryingFilter = {
-        val head <> tail = remaining: @unchecked
-        remaining = tail
-        head
-      }
-    }
 }
 
 trait QueryingFilterIterableTag[I <: QueryingFilterIterable] {

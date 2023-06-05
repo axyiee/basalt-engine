@@ -21,6 +21,10 @@ plugins {
     id "java-library"
 }
 
+repositories {
+	mavenCentral()
+}
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
@@ -29,4 +33,19 @@ java {
 
 jar {
     from rootProject.file("LICENSE")
+}
+
+dependencies {
+    testRuntimeOnly libs.junit.vintage
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+        showExceptions = true
+        showStackTraces = true
+        showCauses = true
+        showStandardStreams = true
+	}
 }

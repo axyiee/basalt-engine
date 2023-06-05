@@ -18,6 +18,9 @@
  */
 package basalt.core.syntax
 
+import filters.FilterIterableSyntax
+
 trait BasaltAllSyntax extends FilterIterableSyntax {}
 
-object all extends BasaltAllSyntax
+object all extends BasaltAllSyntax:
+  export filters.<>

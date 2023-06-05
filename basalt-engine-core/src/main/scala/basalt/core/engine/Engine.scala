@@ -18,12 +18,13 @@
  */
 package basalt.core.engine
 
-import basalt.core.datatype.{Component, Entity}
+import basalt.core.datatype.{Component, ComponentId, EntityId, EntityRef}
 import basalt.core.query.{
   QueryingFilterIterable,
   QueryingFilterIterableTag,
   QueryingFilterTag
 }
+import basalt.core.query.ComponentFilterTag
 
 /** An overview and supervisor of all entities, components, attributes,
   * resources, and their associated metadata.
@@ -52,37 +53,47 @@ import basalt.core.query.{
   * @tparam F
   *   the effect type used for the engine.
   */
-trait Engine[F[_]] {
-  def query[I <: QueryingFilterIterable: QueryingFilterIterableTag](using
-      QueryingFilterIterableTag[I]
-  ): fs2.Stream[F, (Entity[F], I)]
-
+trait Engine[F[_]]:
+  /** The [[ComponentView]] of this engine. */
   def components: ComponentView[F]
 
+  /** The [[EntityView]] of this engine. */
   def entities: EntityView[F]
-}
 
-trait ComponentView[F[_]] {
-  def getId[C <: Component: QueryingFilterTag](using
-      QueryingFilterTag[C]
-  ): Option[Int]
+  /** Starts the lifecycle of this engine, initializing all resources and
+    * components. This starts an infinite loop that will only stop when the
+    * engine the effect it is running on is terminated.
+    */
+  def init: F[Unit]
+
+trait ComponentView[F[_]]:
+  /** Finds the identification of a component of a given type.
+    *
+    * @tparam C
+    *   the type of the component.
+    * @return
+    *   the identification of the component, if found.
+    */
+  def getId[C <: Component: QueryingFilterTag]: F[ComponentId]
 
   def extract[C <: Component: QueryingFilterTag](
-      targetEntityId: Long
-  ): Either[IllegalArgumentException, Option[C]]
+      target: EntityId
+  ): F[C]
+
+  def extractAll(
+      target: EntityId
+  ): fs2.Stream[F, Component]
 
   def remove[C <: Component: QueryingFilterTag](
-      targetEntityId: Long
-  ): F[Option[C]]
-
-  def update[C <: Component: QueryingFilterTag](
-      targetEntityId: Long,
-      content: C
+      target: EntityId
   ): F[Unit]
-}
 
-trait EntityView[F[_]] {
-  def create: F[Entity[F]]
+  def set[C <: Component: QueryingFilterTag](
+      target: EntityId,
+      content: C
+  ): F[C]
 
-  def delete(id: Long): F[Unit]
-}
+trait EntityView[F[_]]:
+  def create: F[EntityRef[F]]
+
+  def delete(id: EntityId): F[Unit]

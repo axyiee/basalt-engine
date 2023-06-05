@@ -33,12 +33,12 @@ trait QueryingFilter
   *   the type whose compile-time information should be extracted.
   */
 trait QueryingFilterTag[F](
-    val qualifiedName: String,
-    val isComponentTag: Boolean
+    val isComponentTag: Boolean,
+    val isMarkerTag: Boolean
 ):
   override def equals(that: Any): Boolean =
-    that.isInstanceOf[QueryingFilterTag[F]] &&
-      that.asInstanceOf[QueryingFilterTag[F]].hashCode() == this.hashCode()
+    that.isInstanceOf[QueryingFilterTag[_]] &&
+      that.asInstanceOf[QueryingFilterTag[_]].hashCode() == this.hashCode()
 
 inline given deriveQueryingFilterTag[F <: Component | QueryingFilter]
     : QueryingFilterTag[F] =
@@ -60,13 +60,17 @@ private def deriveQueryingFilterTagImpl[F: Type](using
       s"${repr.show} must be a **subtype** of **either** basalt.core.datatype.Component or basalt.core.query.QueryingFilter"
     )
   val qualifiedName = repr.classSymbol.get.fullName
+  val isMarkerTag =
+    repr.classSymbol
+      .map(_.primaryConstructor.paramSymss.flatten.isEmpty)
+      .getOrElse(false)
   '{
     new QueryingFilterTag[F](
-      ${ Expr(qualifiedName) },
-      ${ Expr(isComponentOrAttribute) }
+      ${ Expr(isComponentOrAttribute) },
+      ${ Expr(isMarkerTag) }
     ) {
-      override def toString: String = ${ Expr(repr.show) }
-      override def hashCode: Int    = ${ Expr(repr.show.hashCode) }
+      override def toString: String = ${ Expr(qualifiedName) }
+      override def hashCode: Int    = ${ Expr(qualifiedName.hashCode) }
       override def equals(that: Any): Boolean = that match {
         case that: QueryingFilterTag[_] => that.hashCode == this.hashCode
         case _                          => false
@@ -76,4 +80,16 @@ private def deriveQueryingFilterTagImpl[F: Type](using
 
 given orderingForQueryingFilterTag
     : Ordering[QueryingFilterTag[QueryingFilter]] =
-  Ordering.by(_.qualifiedName)
+  Ordering.by(_.toString)
+
+type ComponentFilter[F <: QueryingFilter] <: QueryingFilter =
+  F match {
+    case Component => F
+    case _         => Nothing
+  }
+
+type ComponentFilterTag[F <: QueryingFilter] <: QueryingFilterTag[F] =
+  F match {
+    case Component => QueryingFilterTag[F]
+    case _         => Nothing
+  }

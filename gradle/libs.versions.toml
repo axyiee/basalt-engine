@@ -7,6 +7,9 @@ scala = "3.2.2"
 scalatest = "3.2.15"
 fs2 = "3.7.0"
 spotless = "6.18.0"
+munit = "1.0.0-M7"
+munit-cats-effect = "2.0.0-M3"
+junit-vintage = "5.9.3"
 
 [libraries]
 minecraft = { module = "com.mojang:minecraft", version.ref = "minecraft" }
@@ -16,3 +19,9 @@ cats-collections-core = { module = "org.typelevel:cats-collections-core_3", vers
 scala-library = { module = "org.scala-lang:scala3-library_3", version.ref = "scala" }
 scalatest = { module = "org.scalatest:scalatest_3", version.ref = "scalatest" }
 fs2-core = { module = "co.fs2:fs2-core_3", version.ref = "fs2" }
+munit = { module = "org.scalameta:munit_3", version.ref = "munit" }
+munit-cats-effect = { module = "org.typelevel:munit-cats-effect_3", version.ref = "munit-cats-effect" }
+junit-vintage = { module = "org.junit.vintage:junit-vintage-engine", version.ref = "junit-vintage" }
+
+[bundles]
+munit = ["munit", "munit-cats-effect"]

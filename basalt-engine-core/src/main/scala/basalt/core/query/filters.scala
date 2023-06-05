@@ -16,30 +16,35 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-package basalt.core.datatype
+package basalt.core.query
+package filters
 
-import basalt.core.engine.Engine
-import basalt.core.query.{QueryingFilterIterable, QueryingFilterIterableTag}
+import basalt.core.datatype.Component
 
-/** A [System] is a function which can modify content within an engine.
+/** Tracks the addition of a component to an entity.
   *
-  * @tparam F
-  *   the effect type used for the engine.
   * @tparam C
-  *   the context for the current execution.
+  *   the type of the component that has been added.
   */
-trait System[F[_], C]:
-  def execute(context: C, engine: Engine[F]): F[Unit]
+trait Added[C <: Component: QueryingFilterTag] extends QueryingFilter
 
-/** A [System] is a function which matches a specific querying context related
-  * to entities and components, which can modify content within an engine.
+/** Tracks the removal of a component from an entity.
   *
-  * @tparam F
-  *   the effect type used for the engine.
-  * @tparam Q
-  *   the querying condition for this system to be run.
+  * @tparam C
+  *   the type of the component that has been removed.
   */
-trait IteratingSystem[F[
-    _
-], Q <: QueryingFilterIterable: QueryingFilterIterableTag]
-    extends System[F, Q]
+trait Removed[C <: Component: QueryingFilterTag] extends QueryingFilter
+
+/** Tracks the change of a component from an entity.
+  *
+  * @tparam C
+  *   the type of the component that has been changed.
+  */
+trait Changed[C <: Component: QueryingFilterTag] extends QueryingFilter
+
+/** Tracks either a component addition, removal or change from an entity.
+  *
+  * @tparam C
+  *   the type of the component that has been changed.
+  */
+trait Whatever[C <: Component: QueryingFilterTag] extends QueryingFilter

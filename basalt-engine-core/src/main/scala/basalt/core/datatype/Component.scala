@@ -19,10 +19,9 @@
 package basalt.core.datatype
 
 import basalt.core.engine.Engine
-import cats.Id
-import cats.kernel.Monoid
+import cats.collections.BitSet
 
-import scala.quoted.{Expr, Quotes, Type}
+type ComponentId = Long
 
 /** A [[Component]] is an unique data type without behaviour that can be
   * attached to an [[Entity]].
@@ -38,8 +37,7 @@ import scala.quoted.{Expr, Quotes, Type}
   * otherwise. Attributes on the other hand, are the opposite.
   *
   * Marker [[Component]]s ([[Component]]s without any data) are used for
-  * signaling or identification purposes. You can create them by not providing
-  * another class as a type parameter and give [[Nothing]] instead.
+  * signaling or identification purposes.
   *
   * ==Example==
   *
@@ -53,14 +51,25 @@ import scala.quoted.{Expr, Quotes, Type}
   */
 trait Component
 
-// /** Information required by the ongoing ticking and querying processes,
-//   * available at runtime execution, dynamically created by an
-//   * [[basalt.core.engine.Engine]].
-//   *
-//   * @tparam I
-//   *   The type of the component being described.
-//   */
-// case class ComponentDescriptor(
-//     id: Int,
-//     archetypes: Map[ /* K: ID, V: Column */ Int, Int]
-// )
+type ComponentSet = ComponentSet.Type
+
+/** An data type regarding an ordered set of [Component]s based on bitsets. Each
+  * component ID is mapped to a bit in the bitset, and the bitset is used to
+  * store the components in a ordered way to avoid archetypes with the same
+  * components but in different orders.
+  */
+object ComponentSet {
+  opaque type Type = BitSet
+
+  /** Creates a new [[ComponentSet]] with the given component IDs. */
+  def of(ids: ComponentId*): ComponentSet =
+    BitSet(ids.map(_.toInt): _*)
+
+  extension (set: ComponentSet)
+    def toBitSet: BitSet                     = set
+    def toSet: Set[Int]                      = set.toBitSet.toSet
+    def apply(target: ComponentId): Boolean  = set.toBitSet(target.toInt)
+    def +(target: ComponentId): ComponentSet = set.toBitSet + target.toInt
+    def -(target: ComponentId): ComponentSet = set.toBitSet - target.toInt
+    def iterator: Iterator[Int]              = set.toBitSet.iterator
+}
