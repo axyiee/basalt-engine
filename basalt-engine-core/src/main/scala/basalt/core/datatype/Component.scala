@@ -20,6 +20,7 @@ package basalt.core.datatype
 
 import basalt.core.engine.Engine
 import cats.collections.BitSet
+import basalt.core.query.QueryingFilter
 
 type ComponentId = Long
 
@@ -49,7 +50,7 @@ type ComponentId = Long
   *  case class Slider(min: Int, max: Int) extends Component
   * }}}
   */
-trait Component
+trait Component extends QueryingFilter
 
 type ComponentSet = ComponentSet.Type
 

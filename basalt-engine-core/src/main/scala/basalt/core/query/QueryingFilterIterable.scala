@@ -24,29 +24,29 @@ import basalt.core.syntax.all._
 import scala.annotation.tailrec
 import scala.quoted.{Expr, Quotes, Type}
 
-trait QueryingFilterIterable extends Iterable[QueryingFilter] {
+trait QueryingFilterIterable extends Product with Iterable[QueryingFilter] {
   override def toString: String = this match {
-    case head <> QNil => head.toString
+    case head <> Fin  => head.toString
     case head <> tail => s"$head <> $tail"
-    case QNil         => "QNil"
+    case Fin          => "Fin"
   }
 }
 
 object QueryingFilterIterable {
-  def apply(): QNil.type = QNil
+  def apply: Fin.type = Fin
 
-  def apply[C <: QueryingFilter: QueryingFilterTag](component: C): C <> QNil =
-    component <> QNil
+  def apply[C <: QueryingFilter: QueryingFilterTag](filter: C): C <> Fin =
+    filter <> Fin
 }
 
 // The only reason to not use a "case object" extending ComponentSet directly is for
-// syntax sugar; using CNil instead of CNil.type.
-sealed trait QNil extends QueryingFilterIterable {
-  def <>[C <: QueryingFilter: QueryingFilterTag](head: C): C <> QNil =
+// syntax sugar; using Fin instead of Fin.type.
+sealed trait Fin extends QueryingFilterIterable {
+  def <>[C <: QueryingFilter: QueryingFilterTag](head: C): C <> Fin =
     basalt.core.syntax.filters.<>(head, this)
 }
 
-case object QNil extends QNil {
+case object Fin extends Fin {
   override def iterator = Iterator.empty
 }
 
@@ -108,18 +108,14 @@ private def hasDuplicates[I <: QueryingFilterIterable: Type](using
     case _               => false
   }
 
-@tailrec
 def hasRepetitions[
     I <: QueryingFilterIterable: Type,
     F <: QueryingFilter: Type
-](using quotes: Quotes): Boolean = Type.of[I] match {
-  case '[F <> tail] => true
-  case '[_ <> tail] => hasRepetitions[tail, F]
-  case _            => false
-}
-
-type OnlyComponents[L <: QueryingFilterIterable] <: QueryingFilterIterable =
-  L match {
-    case _ <> tail => Component <> OnlyComponents[tail]
-    case QNil      => QNil
-  }
+](using quotes: Quotes): Boolean =
+  def count[I <: QueryingFilterIterable: Type, F <: QueryingFilter: Type]: Int =
+    Type.of[I] match {
+      case '[F <> tail] => 1 + count[tail, F]
+      case '[_ <> tail] => count[tail, F]
+      case _            => 0
+    }
+  count[I, F] > 1

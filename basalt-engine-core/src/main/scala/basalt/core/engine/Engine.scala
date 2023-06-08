@@ -74,9 +74,9 @@ trait ComponentView[F[_]]:
     * @return
     *   the identification of the component, if found.
     */
-  def getId[C <: Component: QueryingFilterTag]: F[ComponentId]
+  def getId[C <: Component: ComponentFilterTag]: F[ComponentId]
 
-  def extract[C <: Component: QueryingFilterTag](
+  def extract[C <: Component: ComponentFilterTag](
       target: EntityId
   ): F[C]
 
@@ -84,14 +84,14 @@ trait ComponentView[F[_]]:
       target: EntityId
   ): fs2.Stream[F, Component]
 
-  def remove[C <: Component: QueryingFilterTag](
+  def remove[C <: Component: ComponentFilterTag](
       target: EntityId
   ): F[Unit]
 
-  def set[C <: Component: QueryingFilterTag](
+  def set[C <: Component: ComponentFilterTag](
       target: EntityId,
       content: C
-  ): F[C]
+  ): F[Unit]
 
 trait EntityView[F[_]]:
   def create: F[EntityRef[F]]

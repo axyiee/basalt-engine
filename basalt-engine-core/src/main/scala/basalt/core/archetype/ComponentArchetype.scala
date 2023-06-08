@@ -22,7 +22,6 @@ import basalt.core.datatype.{Component, ComponentId, ComponentSet, EntityId}
 import basalt.core.engine.ComponentView
 import basalt.core.query.{
   ComponentFilterTag,
-  OnlyComponents,
   QueryingFilter,
   QueryingFilterIterable,
   QueryingFilterIterableTag,
@@ -59,9 +58,9 @@ case class ArchetypeEdge[F[_]: Sync](
 class ComponentArchetype[F[_]: Sync](
     val id: ArchetypeId,
     val components: ComponentSet,
-    val findArchetype: (ComponentSet) => F[ComponentArchetype[F]]
+    private val findArchetype: (ComponentSet) => F[ComponentArchetype[F]]
 ):
-  val edges: LongMap[ArchetypeEdge[F]] = LongMap.empty
+  private val edges: LongMap[ArchetypeEdge[F]] = LongMap.empty
 
   /** A [[LongMap]] holding the position of components of all entities within
     * this archetype. First dimension: Column, represented by the position of
@@ -127,7 +126,7 @@ class ComponentArchetype[F[_]: Sync](
       }
     }
 
-  /** Move an entity from another archetype to this archetype.
+  /** Moves an entity from another archetype to this archetype.
     * @param from
     *   the archetype to move the entity from.
     * @param entity
@@ -141,12 +140,43 @@ class ComponentArchetype[F[_]: Sync](
         val toDimension = this.buffer(fromId)
         if toDimension != null then
           val component = fromDimension.remove(entity.toBits)
+          if !component.isDefined then
+            throw new IllegalStateException(
+              s"Entity $entity is corrupted; component $fromId is missing."
+            )
           component.foreach(it => toDimension.put(entity.toBits, it))
       }
     }
 
-  /** Add a [[Component]] to an entity. The entity is going to move archetypes
-    * if the component is not present in this archetype.
+  /** Moves a set of entities from another archetype to this archetype.
+    * @param from
+    *   the archetype to move the entities from.
+    * @param entities
+    *   the entity IDs.
+    * @return
+    *   an effect of the operation, [F] of [[Unit]] if successful.
+    */
+  def moveEntityBulk(
+      from: ComponentArchetype[F],
+      entities: EntityId*
+  ): F[Unit] =
+    Sync[F].delay {
+      from.buffer.foreach { (fromId, fromDimension) =>
+        val toDimension = this.buffer(fromId)
+        if toDimension != null then
+          entities.foreach { entity =>
+            val component = fromDimension.remove(entity.toBits)
+            if !component.isDefined then
+              throw new IllegalStateException(
+                s"Entity $entity is corrupted; component $fromId is missing."
+              )
+            component.foreach(it => toDimension.put(entity.toBits, it))
+          }
+      }
+    }
+
+  /** Inserts a [[Component]] into an entity. The entity is going to move
+    * archetypes if the component is not present in this archetype.
     * @param entityId
     *   the entity ID.
     * @param componentId
@@ -173,10 +203,11 @@ class ComponentArchetype[F[_]: Sync](
           case Some(edge) =>
             Sync[F]
               .pure(edge.add)
-              .flatTap { add =>
-                add.addComponent(entityId, componentId, component)
-                add.moveEntity(this, entityId)
-              }
+              .flatTap(add =>
+                add
+                  .addComponent(entityId, componentId, component)
+                  .flatTap(_ => add.moveEntity(this, entityId))
+              )
           case None =>
             for
               existingEdge <- Sync[F].pure(edges.get(componentId))
@@ -185,24 +216,23 @@ class ComponentArchetype[F[_]: Sync](
                   Sync[F]
                     .pure(edge.add)
                     .flatTap(add =>
-                      Sync[F].delay {
-                        add.addComponent(entityId, componentId, component)
-                        add.moveEntity(this, entityId)
-                      }
+                      add
+                        .addComponent(entityId, componentId, component)
+                        .flatTap(_ => add.moveEntity(this, entityId))
                     )
                 case None =>
                   findArchetype(components + componentId)
                     .flatTap(arch =>
-                      Sync[F].delay {
-                        val edge = ArchetypeEdge[F](add = arch, remove = this)
-                        edge.add.addComponent(entityId, componentId, component)
-                        edge.add.moveEntity(this, entityId)
-                        edges.put(componentId, edge)
-                      }
+                      Sync[F]
+                        .pure(ArchetypeEdge[F](add = arch, remove = this))
+                        .flatTap(_.add.moveEntity(this, entityId))
+                        .flatTap(edge =>
+                          Sync[F].delay(edges.put(componentId, edge))
+                        )
                     )
             yield archetype
 
-  /** Remove a [[Component]] from an entity. The entity is going to move
+  /** Removes a [[Component]] from an entity. The entity is going to move
     * archetypes if the component is present in this archetype.
     * @param entityId
     *   the entity ID.
@@ -223,4 +253,86 @@ class ComponentArchetype[F[_]: Sync](
               .pure(edge.remove)
               .flatTap(_.moveEntity(this, entityId))
           case None =>
-            Sync[F].pure(this)
+            findArchetype(components - componentId)
+              .flatTap(arch =>
+                Sync[F]
+                  .pure(ArchetypeEdge[F](add = this, remove = arch))
+                  .flatTap(_.remove.moveEntity(this, entityId))
+                  .flatTap(edge => Sync[F].delay(edges.put(componentId, edge)))
+              )
+      case None =>
+        Sync[F].pure(this)
+
+  /** Inserts a set of distinct [[Component]] within the same type into a set of
+    * distinct entities. The entities are going to move archetypes if the
+    * component ID is not present in this archetype.
+    * @param componentId
+    *   the component ID.
+    * @param entries
+    *   the entries to insert.
+    */
+  def addComponentBulk[C <: Component](
+      componentId: ComponentId,
+      entries: (EntityId, C)*
+  ): F[ComponentArchetype[F]] =
+    buffer.get(componentId) match
+      case Some(dimension) =>
+        Sync[F]
+          .pure(this)
+          .flatTap(_ =>
+            Sync[F].delay {
+              entries.foreach { (entityId, component) =>
+                dimension.put(entityId.toBits, component)
+              }
+            }
+          )
+      case None =>
+        for
+          existingEdge <- Sync[F].pure(edges.get(componentId))
+          archetype <- existingEdge match
+            case Some(edge) =>
+              Sync[F]
+                .pure(edge.add)
+                .flatTap(_.addComponentBulk(componentId, entries: _*))
+            case None =>
+              findArchetype(components + componentId)
+                .flatTap(arch =>
+                  Sync[F]
+                    .pure(ArchetypeEdge[F](add = arch, remove = this))
+                    .flatTap(_.add.moveEntityBulk(this, entries.map(_._1): _*))
+                    .flatTap(edge =>
+                      Sync[F].delay(edges.put(componentId, edge))
+                    )
+                )
+        yield archetype
+
+  /** Removes a set of distinct [[Component]] within the same type from a set of
+    * distinct entities. The entities are going to move archetypes if the
+    * component ID is present in this archetype.
+    * @param componentId
+    *   the component ID.
+    * @param entities
+    *   the entities to remove.
+    */
+  def removeComponentBulk(
+      componentId: ComponentId,
+      entities: EntityId*
+  ): F[ComponentArchetype[F]] =
+    buffer.get(componentId) match
+      case Some(dimension) =>
+        edges.get(componentId) match
+          case Some(edge) =>
+            Sync[F]
+              .pure(edge.remove)
+              .flatTap(_.moveEntityBulk(this, entities: _*))
+          case None =>
+            findArchetype(components - componentId)
+              .flatTap(arch =>
+                Sync[F]
+                  .pure(ArchetypeEdge[F](add = this, remove = arch))
+                  .flatTap(edge =>
+                    edge.remove.moveEntityBulk(this, entities: _*)
+                  )
+                  .flatTap(edge => Sync[F].delay(edges.put(componentId, edge)))
+              )
+      case None => Sync[F].pure(this)

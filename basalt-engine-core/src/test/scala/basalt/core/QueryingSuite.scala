@@ -18,16 +18,22 @@
  */
 package basalt.core
 
-import concurrent.duration.DurationInt
-import default.{BasaltEngine, EnginePipeline}
-import munit._
-import cats.effect._
-import java.util.concurrent.TimeoutException
+import syntax.all.given
+import datatype.Component
+import query.{ComponentFilterTag, QueryingFilter}
 
-class EnginePipelineSuite extends CatsEffectSuite:
-  test("EnginePipeline must be able to tick") {
-    BasaltEngine[IO]()
-      .flatMap(engine =>
-        interceptIO[TimeoutException](engine.pipeline.loop.timeout(5.seconds))
-      )
+import cats.effect._
+import munit._
+
+private def getStringRepresentation[C <: Component: ComponentFilterTag](using
+    tag: ComponentFilterTag[C]
+): String = tag.toString
+
+class QueryingSuite extends CatsEffectSuite:
+  test("Querying filter tag can be implicitly summoned by components") {
+    class TestComponent(val value: Int) extends Component
+    assertEquals(
+      getStringRepresentation[TestComponent],
+      "basalt.core.QueryingSuite._$TestComponent"
+    )
   }

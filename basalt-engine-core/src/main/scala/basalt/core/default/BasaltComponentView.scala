@@ -40,10 +40,10 @@ class BasaltComponentView[F[_]: Sync](
     val entities: EntitiesDescriptor[F],
     val archetypes: ArchetypesDescriptor[F]
 ) extends ComponentView[F]:
-  override def getId[C <: Component: QueryingFilterTag]: F[Long] =
+  override def getId[C <: Component: ComponentFilterTag]: F[Long] =
     components.getId[C]
 
-  override def extract[C <: Component: QueryingFilterTag](
+  override def extract[C <: Component: ComponentFilterTag](
       target: EntityId
   ): F[C] =
     for
@@ -73,7 +73,7 @@ class BasaltComponentView[F[_]: Sync](
       component   <- fs2.Stream.emits(archetype.getComponents(target).toSeq)
     yield component
 
-  override def remove[C <: Component: QueryingFilterTag](
+  override def remove[C <: Component: ComponentFilterTag](
       target: EntityId
   ): F[Unit] =
     for
@@ -89,7 +89,7 @@ class BasaltComponentView[F[_]: Sync](
       component <- archetype.removeComponent(target, componentId)
     yield ()
 
-  override def update[C <: Component: QueryingFilterTag](
+  override def set[C <: Component: ComponentFilterTag](
       target: EntityId,
       content: C
   ): F[Unit] =

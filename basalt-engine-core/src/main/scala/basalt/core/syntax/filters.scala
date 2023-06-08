@@ -25,7 +25,8 @@ import basalt.core.query.{
   QueryingFilterTag
 }
 import scala.annotation.showAsInfix
-import basalt.core.query.QNil
+import basalt.core.query.Fin
+import basalt.core.syntax.filters.all.<>
 
 trait FilterIterableSyntax:
   extension [
@@ -41,11 +42,10 @@ final case class <>[
     +L <: QueryingFilterIterable
 ](h: C, t: L)
     extends QueryingFilterIterable {
-
   override def iterator: Iterator[QueryingFilter] =
     new Iterator[QueryingFilter] {
       private var remaining: QueryingFilterIterable = h <> t
-      override def hasNext: Boolean                 = remaining != QNil
+      override def hasNext: Boolean                 = remaining != Fin
       override def next(): QueryingFilter = {
         val head <> tail = remaining: @unchecked
         remaining = tail

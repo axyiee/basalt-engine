@@ -1,12 +1,11 @@
 [versions]
-minecraft = "1.19.4"
-cats-effect = "3.4.9"
+minecraft = "1.20"
+cats-effect = "3.5.0"
 cats-core = "2.9.0"
 cats-collections-core = "0.9.6"
-scala = "3.2.2"
-scalatest = "3.2.15"
+scala = "3.3.0"
 fs2 = "3.7.0"
-spotless = "6.18.0"
+spotless = "6.19.0"
 munit = "1.0.0-M7"
 munit-cats-effect = "2.0.0-M3"
 junit-vintage = "5.9.3"
@@ -17,7 +16,6 @@ cats-core = { module = "org.typelevel:cats-core_3", version.ref = "cats-core" }
 cats-effect = { module = "org.typelevel:cats-effect_3", version.ref = "cats-effect" }
 cats-collections-core = { module = "org.typelevel:cats-collections-core_3", version.ref = "cats-collections-core" }
 scala-library = { module = "org.scala-lang:scala3-library_3", version.ref = "scala" }
-scalatest = { module = "org.scalatest:scalatest_3", version.ref = "scalatest" }
 fs2-core = { module = "co.fs2:fs2-core_3", version.ref = "fs2" }
 munit = { module = "org.scalameta:munit_3", version.ref = "munit" }
 munit-cats-effect = { module = "org.typelevel:munit-cats-effect_3", version.ref = "munit-cats-effect" }

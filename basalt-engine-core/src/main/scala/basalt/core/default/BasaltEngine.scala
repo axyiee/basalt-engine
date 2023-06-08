@@ -24,21 +24,10 @@ import basalt.core.descriptor.{
   EntitiesDescriptor
 }
 import basalt.core.engine.Engine
-import basalt.core.query.{
-  OnlyComponents,
-  QueryingFilterIterable,
-  QueryingFilterIterableTag
-}
+import basalt.core.query.{QueryingFilterIterable, QueryingFilterIterableTag}
 
 import cats.effect.kernel.Async
 import cats.syntax.all._
-
-import collection.mutable.{ArrayBuffer, Map, LongMap}
-
-type ArchetypeCombIndex =
-  Map[ /* K: Component combination, V: Archetype ID */ OnlyComponents[
-      QueryingFilterIterable
-    ], Int]
 
 /** Default, general-purpose implementation of the Basalt [[Engine]] API.
   *
@@ -52,7 +41,9 @@ class BasaltEngine[F[_]: Async](
     override val components: BasaltComponentView[F],
     override val entities: BasaltEntityView[F],
     val pipeline: EnginePipeline[F]
-) extends Engine[F]
+) extends Engine[F]:
+  override def init: F[Unit] =
+    Async[F].unit
 
 object BasaltEngine:
   def apply[F[_]: Async](tps: Int = 20): F[BasaltEngine[F]] =

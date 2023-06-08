@@ -24,3 +24,8 @@ trait BasaltAllSyntax extends FilterIterableSyntax {}
 
 object all extends BasaltAllSyntax:
   export filters.<>
+  export basalt.core.query.{
+    deriveQueryingFilterTag,
+    deriveQueryingFilterIterableTag,
+    Fin
+  }

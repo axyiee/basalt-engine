@@ -26,25 +26,25 @@ import basalt.core.datatype.Component
   * @tparam C
   *   the type of the component that has been added.
   */
-trait Added[C <: Component: QueryingFilterTag] extends QueryingFilter
+trait Added[C <: Component: ComponentFilterTag] extends QueryingFilter
 
 /** Tracks the removal of a component from an entity.
   *
   * @tparam C
   *   the type of the component that has been removed.
   */
-trait Removed[C <: Component: QueryingFilterTag] extends QueryingFilter
+trait Removed[C <: Component: ComponentFilterTag] extends QueryingFilter
 
 /** Tracks the change of a component from an entity.
   *
   * @tparam C
   *   the type of the component that has been changed.
   */
-trait Changed[C <: Component: QueryingFilterTag] extends QueryingFilter
+trait Changed[C <: Component: ComponentFilterTag] extends QueryingFilter
 
 /** Tracks either a component addition, removal or change from an entity.
   *
   * @tparam C
   *   the type of the component that has been changed.
   */
-trait Whatever[C <: Component: QueryingFilterTag] extends QueryingFilter
+trait Whatever[C <: Component: ComponentFilterTag] extends QueryingFilter

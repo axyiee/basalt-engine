@@ -54,7 +54,7 @@ private def deriveQueryingFilterTagImpl[F: Type](using
   val isComponentOrAttribute =
     repr <:< TypeRepr.of[Component] && !(repr =:= TypeRepr
       .of[Component]) && !(repr =:= TypeRepr.of[Attribute])
-  if (!isFilter && !isComponentOrAttribute) || (isFilter && isComponentOrAttribute)
+  if (!isFilter && !isComponentOrAttribute)
   then
     report.error(
       s"${repr.show} must be a **subtype** of **either** basalt.core.datatype.Component or basalt.core.query.QueryingFilter"
@@ -82,14 +82,4 @@ given orderingForQueryingFilterTag
     : Ordering[QueryingFilterTag[QueryingFilter]] =
   Ordering.by(_.toString)
 
-type ComponentFilter[F <: QueryingFilter] <: QueryingFilter =
-  F match {
-    case Component => F
-    case _         => Nothing
-  }
-
-type ComponentFilterTag[F <: QueryingFilter] <: QueryingFilterTag[F] =
-  F match {
-    case Component => QueryingFilterTag[F]
-    case _         => Nothing
-  }
+type ComponentFilterTag[F <: Component] = QueryingFilterTag[F]

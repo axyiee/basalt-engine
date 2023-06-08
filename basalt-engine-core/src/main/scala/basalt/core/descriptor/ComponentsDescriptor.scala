@@ -19,8 +19,14 @@
 package basalt.core.descriptor
 
 import basalt.core.archetype.{ArchetypeId, ComponentArchetype}
-import basalt.core.datatype.{Component, ComponentId, EntityId}
-import basalt.core.query.{ComponentFilterTag, QueryingFilter, QueryingFilterTag}
+import basalt.core.datatype.{Component, ComponentId, ComponentSet, EntityId}
+import basalt.core.query.{
+  ComponentFilterTag,
+  QueryingFilter,
+  QueryingFilterTag,
+  QueryingFilterIterable,
+  QueryingFilterIterableTag
+}
 
 import cats.effect.kernel.{Async, Sync}
 import cats.effect.std.AtomicCell
@@ -35,14 +41,14 @@ import scala.collection.mutable.LongMap
   */
 class ComponentsDescriptor[F[_]: Sync] private (
     val counter: AtomicCell[F, ComponentId],
-    val indices: Map[ComponentFilterTag[QueryingFilter], ComponentId]
+    val indices: Map[ComponentFilterTag[Component], ComponentId]
 ):
-  def getId[C <: Component: QueryingFilterTag]: F[Long] =
+  def getId[C <: Component: ComponentFilterTag]: F[Long] =
     for
       index <- Sync[F].pure(
         indices.get(
           summon[QueryingFilterTag[C]]
-            .asInstanceOf[ComponentFilterTag[QueryingFilter]]
+            .asInstanceOf[ComponentFilterTag[Component]]
         )
       )
       id <- index match
@@ -50,24 +56,34 @@ class ComponentsDescriptor[F[_]: Sync] private (
         case None     => init[C]
     yield id
 
-  def init[C <: Component: QueryingFilterTag]: F[Long] =
+  def register[I <: QueryingFilterIterable: QueryingFilterIterableTag](using
+      tag: QueryingFilterIterableTag[I]
+  ): F[ComponentSet] =
+    for
+      tags <- Sync[F].pure(tag.tags)
+      ids <- tags.traverse { tag =>
+        indices.get(tag.asInstanceOf) match
+          case Some(id) => Sync[F].pure(id)
+          case None     => initRaw(tag.asInstanceOf)
+      }
+    yield ComponentSet.of(ids: _*)
+
+  def initRaw(tag: ComponentFilterTag[Component]): F[Long] =
     counter
       .getAndUpdate(_ + 1)
-      .flatTap(id =>
-        Sync[F].delay(
-          indices.put(
-            summon[QueryingFilterTag[C]]
-              .asInstanceOf[ComponentFilterTag[QueryingFilter]],
-            id
-          )
-        )
-      )
+      .flatTap(id => Sync[F].delay(indices.put(tag, id)))
+
+  def init[C <: Component: ComponentFilterTag]: F[Long] =
+    initRaw(
+      summon[ComponentFilterTag[C]]
+        .asInstanceOf[ComponentFilterTag[Component]]
+    )
 
 object ComponentsDescriptor:
   def apply[F[_]: Async]: F[ComponentsDescriptor[F]] =
     for
       counter <- AtomicCell[F].of[ComponentId](1L)
       indices <- Sync[F].pure(
-        HashMap[ComponentFilterTag[QueryingFilter], Long]()
+        HashMap[ComponentFilterTag[Component], Long]()
       )
     yield new ComponentsDescriptor[F](counter, indices)

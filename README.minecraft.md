@@ -71,7 +71,7 @@ case class FirstJoin(timestamp: FiniteDuration) extends Component
 
 def firstJoinWelcome[F[_]: Clock] =
   System[F]
-    .named[EventRead[PlayerJoin] <> Not[FirstJoin] <> QNil]("first-join-welcome") { ctx =>
+    .named[EventRead[PlayerJoin] <> Not[FirstJoin] <> Fin]("first-join-welcome") { ctx =>
         val event <> _ = ctx
         Clock[F].realTime(TimeUnit.MILLISECONDS)
             >> (event.assignee.add(FirstJoin(_)))
