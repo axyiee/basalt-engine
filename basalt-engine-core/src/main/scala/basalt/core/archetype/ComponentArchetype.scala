@@ -313,6 +313,8 @@ class ComponentArchetype[F[_]: Sync](
     *   the component ID.
     * @param entities
     *   the entities to remove.
+    * @return
+    *  the new archetype id.
     */
   def removeComponentBulk(
       componentId: ComponentId,

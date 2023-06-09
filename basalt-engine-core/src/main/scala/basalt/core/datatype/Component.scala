@@ -66,6 +66,9 @@ object ComponentSet {
   def of(ids: ComponentId*): ComponentSet =
     BitSet(ids.map(_.toInt): _*)
 
+  /** Creates an empty [[ComponentSet]]. */
+  def empty: ComponentSet = BitSet.empty
+
   extension (set: ComponentSet)
     def toBitSet: BitSet                     = set
     def toSet: Set[Int]                      = set.toBitSet.toSet

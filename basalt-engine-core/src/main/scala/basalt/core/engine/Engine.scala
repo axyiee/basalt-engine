@@ -1,21 +1,20 @@
-/**
- * Basalt Engine, an open-source ECS engine for Scala 3
- * Copyright (C) 2023 Pedro Henrique
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 3 of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
- */
+/** Basalt Engine, an open-source ECS engine for Scala 3 Copyright (C) 2023
+  * Pedro Henrique
+  *
+  * This program is free software; you can redistribute it and/or modify it
+  * under the terms of the GNU Lesser General Public License as published by the
+  * Free Software Foundation; either version 3 of the License, or (at your
+  * option) any later version.
+  *
+  * This program is distributed in the hope that it will be useful, but WITHOUT
+  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+  * for more details.
+  *
+  * You should have received a copy of the GNU Lesser General Public License
+  * along with this program; if not, write to the Free Software Foundation,
+  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+  */
 package basalt.core.engine
 
 import basalt.core.datatype.{Component, ComponentId, EntityId, EntityRef}
@@ -25,6 +24,7 @@ import basalt.core.query.{
   QueryingFilterTag
 }
 import basalt.core.query.ComponentFilterTag
+import basalt.core.archetype.ArchetypeId
 
 /** An overview and supervisor of all entities, components, attributes,
   * resources, and their associated metadata.
@@ -76,24 +76,91 @@ trait ComponentView[F[_]]:
     */
   def getId[C <: Component: ComponentFilterTag]: F[ComponentId]
 
+  /** Extracts a component from an entity. Raises an error if the component is
+    * not found.
+    *
+    * @tparam C
+    *   the type of the component.
+    * @param target
+    *   the identification of the entity.
+    * @return
+    *   the component, if found.
+    */
   def extract[C <: Component: ComponentFilterTag](
       target: EntityId
   ): F[C]
 
+  /** Extracts all components from an entity. Raises an error if the entity is
+    * not found.
+    *
+    * @param target
+    *   the identification of the entity.
+    * @return
+    *   a stream of all components of the entity.
+    */
   def extractAll(
       target: EntityId
   ): fs2.Stream[F, Component]
 
+  /** Removes a component from an entity.
+    *
+    * @tparam C
+    *   the type of the component.
+    * @param target
+    *   the identification of the entity.
+    */
   def remove[C <: Component: ComponentFilterTag](
       target: EntityId
   ): F[Unit]
 
+  /** Inserts or updates a component of a given type on an entity. Raises an
+    * error if the entity is not found.
+    *
+    * @tparam C
+    *   the type of the component.
+    * @param target
+    *   the identification of the entity.
+    * @param content
+    *   the component to be inserted or updated.
+    */
   def set[C <: Component: ComponentFilterTag](
       target: EntityId,
       content: C
   ): F[Unit]
 
 trait EntityView[F[_]]:
+  /** Creates a new entity.
+    *
+    * @tparam C
+    *   the type of the component.
+    * @return
+    *   a reference for accessing the entity attributes and components.
+    */
   def create: F[EntityRef[F]]
 
+  /** Deletes an entity from the engine, removing all of its components and
+    * attributes.
+    *
+    * @param id
+    *   the identification of the entity.
+    */
   def delete(id: EntityId): F[Unit]
+
+  /** Creates a reference for accessing and modifying the components and
+    * attributes of an entity. Raises an error if not found.
+    *
+    * @tparam A
+    *   the type of the archetype.
+    * @return
+    *   a reference for accessing the entity attributes and components.
+    */
+  def get(id: EntityId): Either[NoSuchElementException, EntityRef[F]]
+
+  /** Finds the archetype ID of an entity. Raises an error if not found.
+    *
+    * @param id
+    *   the identification of the entity.
+    * @return
+    *   the identification of the archetype.
+    */
+  def getArchetypeId(id: EntityId): Either[NoSuchElementException, ArchetypeId]
