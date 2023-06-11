@@ -1,20 +1,21 @@
-/** Basalt Engine, an open-source ECS engine for Scala 3 Copyright (C) 2023
-  * Pedro Henrique
-  *
-  * This program is free software; you can redistribute it and/or modify it
-  * under the terms of the GNU Lesser General Public License as published by the
-  * Free Software Foundation; either version 3 of the License, or (at your
-  * option) any later version.
-  *
-  * This program is distributed in the hope that it will be useful, but WITHOUT
-  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
-  * for more details.
-  *
-  * You should have received a copy of the GNU Lesser General Public License
-  * along with this program; if not, write to the Free Software Foundation,
-  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-  */
+/**
+ * Basalt Engine, an open-source ECS engine for Scala 3
+ * Copyright (C) 2023 Pedro Henrique
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 package basalt.core.descriptor
 
 import basalt.core.archetype.{ArchetypeId, ComponentArchetype}
@@ -59,6 +60,12 @@ class ArchetypesDescriptor[F[_]: Sync](
   def apply(id: ArchetypeId): Option[ComponentArchetype[F]] =
     archetypes.get(id)
 
+  def lift(id: ArchetypeId): F[ComponentArchetype[F]] =
+    Sync[F].fromOption(
+      archetypes.get(id),
+      new NoSuchElementException(s"Archetype $id not found")
+    )
+
   def switchFor(
       entity: EntityId,
       from: ArchetypeId,
@@ -79,7 +86,5 @@ object ArchetypesDescriptor:
   def apply[F[_]: Async]: F[ArchetypesDescriptor[F]] =
     for
       counter <- AtomicCell[F].of[ArchetypeId](1L)
-      byComponentSet <- Sync[F].pure(
-        HashMap.empty[ComponentSet, ComponentArchetype[F]]
-      )
+      byComponentSet = HashMap.empty[ComponentSet, ComponentArchetype[F]]
     yield new ArchetypesDescriptor[F](counter, byComponentSet)

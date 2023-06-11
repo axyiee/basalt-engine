@@ -63,24 +63,15 @@ object Tick:
     tick
 
   extension (tick: Tick)
-    def +(other: Tick | Int): Tick     = tick.toInt + other
-    def -(other: Tick | Int): Tick     = tick.toInt - other
-    def *(other: Tick | Int): Tick     = tick.toInt * other
-    def /(other: Tick | Int): Tick     = tick.toInt / other
-    def %(other: Tick | Int): Tick     = tick.toInt % other
-    def <(other: Tick | Int): Boolean  = tick.toInt < other
-    def <=(other: Tick | Int): Boolean = tick.toInt <= other
-    def >(other: Tick | Int): Boolean  = tick.toInt > other
+    def +(other: Tick | Int): Tick     = tick.toInt + other.toInt
+    def -(other: Tick | Int): Tick     = tick.toInt - other.toInt
+    def *(other: Tick | Int): Tick     = tick.toInt * other.toInt
+    def /(other: Tick | Int): Tick     = tick.toInt / other.toInt
+    def %(other: Tick | Int): Tick     = tick.toInt % other.toInt
+    def <(other: Tick | Int): Boolean  = tick.toInt < other.toInt
+    def <=(other: Tick | Int): Boolean = tick.toInt <= other.toInt
+    def >(other: Tick | Int): Boolean  = tick.toInt > other.toInt
     def toInt: Int                     = tick
-
-    /** Returns the difference between two ticks.
-      * @param other
-      *   the other tick.
-      * @return
-      *   the difference between the two ticks.
-      */
-    def relativeTo(other: Tick): Tick =
-      (tick - other) % Math.pow(2, Integer.SIZE).toInt
 
     /** Whether this [[Tick]] occurred since's the system's last run timestamp.
       */
@@ -96,6 +87,6 @@ object Tick:
       *   this [[tick]] within the tick validation threshold.
       */
     def validate(sysThisRun: Tick, tickInfo: TickInfo): Tick =
-      if sysThisRun.relativeTo(tick) > tickInfo.tickValidationThreshold then
-        sysThisRun.relativeTo(tickInfo.tickValidationThreshold)
-      else tick
+      if sysThisRun - tick > tickInfo.tickValidationThreshold then
+        sysThisRun - tickInfo.tickValidationThreshold
+      else sysThisRun

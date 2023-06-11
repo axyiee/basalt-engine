@@ -20,11 +20,13 @@ package basalt.core.default
 
 import basalt.core.datatype.{Tick, TickInfo}
 import basalt.core.engine.Engine
+import basalt.core.event.internal.InternalEvent
 import basalt.core.query.QueryingFilter
 
 import cats.effect.kernel.{Async, Ref, Temporal}
 import cats.syntax.all.*
 
+import fs2.{Stream, Pipe}
 import fs2.concurrent.Topic
 
 /** Processes entities, components, queries, and systems given their previous
@@ -36,6 +38,7 @@ import fs2.concurrent.Topic
 class EnginePipeline[F[_]: Async](
     private val components: BasaltComponentView[F],
     private val entities: BasaltEntityView[F],
+    private val events: Topic[F, InternalEvent],
     tps: Int = 20
 ):
   private val ticking = TickInfo(tps)
@@ -48,20 +51,23 @@ class EnginePipeline[F[_]: Async](
     * @return
     *   the effect that is going to be performed within the current tick.
     */
-  def intercept(currentTick: Tick): F[Unit] =
-    Async[F].unit
+  def intercept: Pipe[F, Tick, Unit] = stream =>
+    stream.foreach { tick =>
+      Async[F].unit
+    }
 
   /** Loops the engine pipeline to allow systems, queries, components and
     * entities to be processed.
     * @return
     *   the effect that is going to be performed within the current tick.
     */
-  def loop: F[Unit] =
-    val currentTick = Ref[F].of(Tick(1))
-    currentTick.flatMap(ref =>
-      ref
-        .getAndUpdate(curr => curr.validate(curr + 1, ticking))
-        .flatTap(intercept)
-        .flatMap(_ => Temporal[F].sleep(ticking.tickDuration))
-        .foreverM
-    )
+  def loop: Stream[F, Unit] =
+    Stream.eval(Ref[F].of(Tick(1))).flatMap { counter =>
+      Stream
+        .awakeEvery[F](ticking.tickDuration)
+        .evalMap(_ =>
+          counter
+            .updateAndGet(before => before.validate(before + 1, ticking))
+        )
+        .through(intercept)
+    }

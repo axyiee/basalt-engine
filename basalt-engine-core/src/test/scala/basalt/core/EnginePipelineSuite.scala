@@ -28,6 +28,8 @@ class EnginePipelineSuite extends CatsEffectSuite:
   test("EnginePipeline must be able to tick") {
     BasaltEngine[IO]()
       .flatMap(engine =>
-        interceptIO[TimeoutException](engine.pipeline.loop.timeout(5.seconds))
+        interceptIO[TimeoutException](
+          engine.pipeline.loop.compile.drain.timeout(5.seconds)
+        )
       )
   }

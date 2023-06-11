@@ -83,7 +83,5 @@ object ComponentsDescriptor:
   def apply[F[_]: Async]: F[ComponentsDescriptor[F]] =
     for
       counter <- AtomicCell[F].of[ComponentId](1L)
-      indices <- Sync[F].pure(
-        HashMap[ComponentFilterTag[Component], Long]()
-      )
+      indices = HashMap[ComponentFilterTag[Component], Long]()
     yield new ComponentsDescriptor[F](counter, indices)

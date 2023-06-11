@@ -1,20 +1,21 @@
-/** Basalt Engine, an open-source ECS engine for Scala 3 Copyright (C) 2023
-  * Pedro Henrique
-  *
-  * This program is free software; you can redistribute it and/or modify it
-  * under the terms of the GNU Lesser General Public License as published by the
-  * Free Software Foundation; either version 3 of the License, or (at your
-  * option) any later version.
-  *
-  * This program is distributed in the hope that it will be useful, but WITHOUT
-  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
-  * for more details.
-  *
-  * You should have received a copy of the GNU Lesser General Public License
-  * along with this program; if not, write to the Free Software Foundation,
-  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-  */
+/**
+ * Basalt Engine, an open-source ECS engine for Scala 3
+ * Copyright (C) 2023 Pedro Henrique
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 package basalt.core.descriptor
 
 import basalt.core.archetype.{ArchetypeId, ComponentArchetype}
@@ -22,6 +23,7 @@ import basalt.core.collection.GenerationalVector
 import basalt.core.datatype.EntityId
 
 import cats.effect.kernel.Sync
+import cats.syntax.all._
 
 import collection.mutable.{ArrayBuffer, LongMap}
 
@@ -40,8 +42,24 @@ class EntitiesDescriptor[F[_]: Sync](
   def getArchetypeId(entity: EntityId): Option[ArchetypeId] =
     meta.get(entity).map(_.value)
 
-  def setArchetypeId(entity: EntityId, archetype: ArchetypeId): F[Unit] =
-    Sync[F].delay(meta.set(entity, archetype))
+  def liftArchetypeId(entity: EntityId): F[ArchetypeId] =
+    Sync[F].fromOption(
+      getArchetypeId(entity),
+      (
+        new NoSuchElementException(s"Entity $entity does not exist")
+      )
+    )
+
+  def setArchetypeId(entity: EntityId, archetype: ArchetypeId): F[ArchetypeId] =
+    Sync[F]
+      .delay(meta.set(entity, archetype))
+      .flatMap(_ match
+        case Some(old) => Sync[F].pure(old)
+        case None =>
+          Sync[F].raiseError(
+            new NoSuchElementException(s"Entity $entity does not exist")
+          )
+      )
 
   def switchArchetype(
       entity: EntityId,
