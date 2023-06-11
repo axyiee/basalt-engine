@@ -23,9 +23,6 @@ plugins {
 
 tasks.withType(ScalaCompile) {
     scalaCompileOptions.with {
-    //    var toolchain = ["-release:17", "-Xtarget:17"]
-    //    additionalParameters == null ? (additionalParameters = toolchain)
-    //            : (additionalParameters += toolchain)
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
