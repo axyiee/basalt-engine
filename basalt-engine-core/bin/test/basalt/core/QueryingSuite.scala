@@ -16,11 +16,24 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+package basalt.core
 
-plugins {
-    id "groovy-gradle-plugin"
-}
+import syntax.all.given
+import datatype.Component
+import query.{ComponentFilterTag, QueryingFilter}
 
-repositories {
-    gradlePluginPortal()
-}
+import cats.effect._
+import munit._
+
+private def getStringRepresentation[C <: Component: ComponentFilterTag](using
+    tag: ComponentFilterTag[C]
+): String = tag.toString
+
+class QueryingSuite extends CatsEffectSuite:
+  test("Querying filter tag can be implicitly summoned by components") {
+    class TestComponent(val value: Int) extends Component
+    assertEquals(
+      getStringRepresentation[TestComponent],
+      "basalt.core.QueryingSuite._$TestComponent"
+    )
+  }

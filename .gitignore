@@ -1,9 +1,6 @@
 # gradle
 .gradle/
 build/
-
-# fabric
-blackstone-platform-fabric/run/
 hs_err_*.log
 replay_*.log
 *.hprof

@@ -16,11 +16,26 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+package basalt.core.datatype
 
-plugins {
-    id "groovy-gradle-plugin"
-}
-
-repositories {
-    gradlePluginPortal()
-}
+/** An [[Attribute]] is a special type of built-in [[Component]] given by the
+  * platform implementation. [[Attribute]]s are used to store data that is
+  * already provided by the platform, such as hunger, health, display name, etc.
+  *
+  * [[Attribute]]s are not serialized and deserialized by default, unless
+  * specified otherwise. Components on the other hand, are the opposite.
+  *
+  * Marker [[Attribute]]s (attributes without any data) are used for signaling
+  * or identification purposes.
+  *
+  * ==Example==
+  *
+  * {{{
+  *  case object Hunger extends Attribute[Int]
+  *
+  *  case object Player extends Attribute[Nothing]
+  *
+  *  case object Health extends Attribute[Int]
+  * }}}
+  */
+trait Attribute extends Component

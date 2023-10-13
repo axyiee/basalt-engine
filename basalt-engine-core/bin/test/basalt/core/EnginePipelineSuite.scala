@@ -16,11 +16,20 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+package basalt.core
 
-plugins {
-    id "groovy-gradle-plugin"
-}
+import concurrent.duration.DurationInt
+import default.{BasaltEngine, EnginePipeline}
+import munit._
+import cats.effect._
+import java.util.concurrent.TimeoutException
 
-repositories {
-    gradlePluginPortal()
-}
+class EnginePipelineSuite extends CatsEffectSuite:
+  test("EnginePipeline must be able to tick") {
+    BasaltEngine[IO]()
+      .flatMap(engine =>
+        interceptIO[TimeoutException](
+          engine.pipeline.loop.compile.drain.timeout(5.seconds)
+        )
+      )
+  }

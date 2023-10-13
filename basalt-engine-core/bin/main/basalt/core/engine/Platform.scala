@@ -16,11 +16,13 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+package basalt.core.engine
 
-plugins {
-    id "groovy-gradle-plugin"
-}
-
-repositories {
-    gradlePluginPortal()
-}
+/** Platform-specific extensibility for [[Engine]].
+  *
+  * Related to the management and supervising of attributes.
+  *
+  * @tparam F
+  *   the effect type used for the engine.
+  */
+trait Platform[F[_]]

@@ -16,11 +16,26 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+package basalt.core.engine
 
-plugins {
-    id "groovy-gradle-plugin"
-}
-
-repositories {
-    gradlePluginPortal()
-}
+/** A resource is a unique instance of a data type stored independent from
+  * entities. Those are available in all contexts, to every entity, and are used
+  * for storing global context or data that is not tied to any specific entity,
+  * such as configurations or game states.
+  *
+  * ==Example==
+  *
+  * {{{
+  *  object Config extends EngineResource[Config.Data]:
+  *     case class Data(...)
+  *
+  *   object GameState extends EngineResource[GameState.State]:
+  *     enum State:
+  *       case Menu, Playing, Paused, GameOver
+  * }}}
+  *
+  * @tparam A
+  *   the type of the resource.
+  */
+trait EngineResource[A]:
+  def access[F[_]](using Engine[F]): F[A]

@@ -16,11 +16,11 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+package basalt.core.table
 
-plugins {
-    id "groovy-gradle-plugin"
-}
+type TableId = TableId.Type
 
-repositories {
-    gradlePluginPortal()
-}
+object TableId:
+  opaque type Type = Long
+  def apply(from: Long): TableId             = from
+  extension (self: TableId) def toLong: Long = self
